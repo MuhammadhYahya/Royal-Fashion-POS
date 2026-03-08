@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  sku         String   @unique
+  name        String
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+  price       Int      // selling price
+  cost        Int      // buying cost
+  stock       Int
+  createdAt   DateTime @default(now())
+
+  saleLines   SaleLine[]
+  returnLines ReturnLine[]
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Sale {
+  id            Int      @id @default(autoincrement())
+  createdAt     DateTime @default(now())
+
+  subtotal      Int
+  discount      Int      @default(0)
+  total         Int
+  profit        Int
+
+  saleLines     SaleLine[]
+  payments      Payment[]
+  returns       Return[]
+}
+
+model SaleLine {
+  id          Int     @id @default(autoincrement())
+
+  sale        Sale    @relation(fields: [saleId], references: [id])
+  saleId      Int
+
+  product     Product @relation(fields: [productId], references: [id])
+  productId   Int
+
+  quantity    Int
+  unitPrice   Int
+  unitCost    Int
+
+  lineTotal   Int
+  lineProfit  Int
+
+  returnLines ReturnLine[]
+}
+
+model Payment {
+  id        Int           @id @default(autoincrement())
+  sale      Sale          @relation(fields: [saleId], references: [id])
+  saleId    Int
+
+  amount    Int
+  method    PaymentMethod
+  createdAt DateTime      @default(now())
+}
+
+model Return {
+  id          Int             @id @default(autoincrement())
+  sale        Sale            @relation(fields: [saleId], references: [id])
+  saleId      Int
+  createdAt   DateTime        @default(now())
+
+  subtotal    Int
+  adjustment  Int             @default(0)
+  totalRefund Int
+  note        String?
+
+  lines       ReturnLine[]
+  payments    RefundPayment[]
+}
+
+model ReturnLine {
+  id          Int      @id @default(autoincrement())
+
+  return      Return   @relation(fields: [returnId], references: [id])
+  returnId    Int
+
+  saleLine    SaleLine @relation(fields: [saleLineId], references: [id])
+  saleLineId  Int
+
+  product     Product  @relation(fields: [productId], references: [id])
+  productId   Int
+
+  quantity    Int
+  unitPrice   Int
+  lineTotal   Int
+}
+
+model RefundPayment {
+  id        Int           @id @default(autoincrement())
+  return    Return        @relation(fields: [returnId], references: [id])
+  returnId  Int
+
+  amount    Int
+  method    PaymentMethod
+  createdAt DateTime      @default(now())
+}
+
+model Expense {
+  id        Int         @id @default(autoincrement())
+  amount    Int
+  type      ExpenseType
+  note      String?
+  createdAt DateTime    @default(now())
+}
+
+enum ExpenseType {
+  GENERAL
+  SPECIFIC
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  EWALLET
+}
