@@ -57,8 +57,16 @@ export default async function DailyCompleteReportPage({
           <table className="table">
             <tbody>
               <tr>
-                <th>Total Sales</th>
+                <th>Gross Sales</th>
                 <td>{formatMoney(report.totalSales, "LKR", "en-LK")}</td>
+              </tr>
+              <tr>
+                <th>Refunds</th>
+                <td>{formatMoney(report.totalRefunds, "LKR", "en-LK")}</td>
+              </tr>
+              <tr>
+                <th>Net Sales</th>
+                <td>{formatMoney(report.netSales, "LKR", "en-LK")}</td>
               </tr>
               <tr>
                 <th>Cash Payments</th>
@@ -75,6 +83,10 @@ export default async function DailyCompleteReportPage({
               <tr>
                 <th>Transaction Count</th>
                 <td>{report.transactionCount}</td>
+              </tr>
+              <tr>
+                <th>Return Count</th>
+                <td>{report.returnCount}</td>
               </tr>
             </tbody>
           </table>

@@ -10,6 +10,7 @@
     "build:web": "npm run verify && next build",
     "start": "next start",
     "start:web": "next start",
+    "postinstall": "prisma generate", 
     "lint": "eslint"
   },
   "dependencies": {

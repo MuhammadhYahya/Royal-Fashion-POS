@@ -251,14 +251,11 @@ export function CashierPos({ initialProducts }: { initialProducts: Product[] }) 
   };
 
   return (
-    <div className="cashier-layout">
-      {message ? (
-        <div style={{gridColumn: "1 / -1", flexShrink: 0, width: "100%"}}>
-          <p className={`notice notice-${messageTone} mb-4`}>{message}</p>
-        </div>
-      ) : null}
-      
-      <div className="cashier-main">
+    <>
+      {message ? <p className={`notice notice-${messageTone} mb-4`}>{message}</p> : null}
+
+      <div className="cashier-layout">
+        <div className="cashier-main">
         <POSProductInput
           query={query}
           products={filtered}
@@ -266,9 +263,9 @@ export function CashierPos({ initialProducts }: { initialProducts: Product[] }) 
           onEnter={addFromSearch}
           onAddItem={addToCart}
         />
-      </div>
+        </div>
 
-      <div className="cashier-sidebar">
+        <div className="cashier-sidebar">
         <POSCart
           items={cart}
           onIncrease={(productId) => changeQty(productId, 1)}
@@ -423,7 +420,8 @@ export function CashierPos({ initialProducts }: { initialProducts: Product[] }) 
           amountDue={amountDue}
           nonCashOver={nonCashOver}
         />
+        </div>
       </div>
-    </div>
+    </>
   );
 }

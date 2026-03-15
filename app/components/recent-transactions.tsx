@@ -9,6 +9,8 @@ type SaleRow = {
   id: number;
   createdAt: Date | string;
   total: number;
+  refundedTotal: number;
+  netTotal: number;
   _count: {
     saleLines: number;
     returns: number;
@@ -45,7 +47,14 @@ export function RecentTransactions({ sales }: { sales: SaleRow[] }) {
         <td>{new Date(sale.createdAt).toLocaleString("en-LK")}</td>
         <td>{sale._count.saleLines}</td>
         <td>{sale._count.returns}</td>
-        <td>{formatMoney(sale.total, "LKR", "en-LK")}</td>
+        <td>
+          <div>{formatMoney(sale.netTotal, "LKR", "en-LK")}</div>
+          {sale.refundedTotal > 0 ? (
+            <small className="field-help">
+              Refunded: {formatMoney(sale.refundedTotal, "LKR", "en-LK")}
+            </small>
+          ) : null}
+        </td>
         <td className="row">
           <Link className="btn btn-sm btn-outline" href={`/sales/${sale.id}`}>
             View
@@ -102,7 +111,7 @@ export function RecentTransactions({ sales }: { sales: SaleRow[] }) {
                 <th>Date</th>
                 <th>Lines</th>
                 <th>Returns</th>
-                <th>Total</th>
+                <th>Net Total</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -135,7 +144,7 @@ export function RecentTransactions({ sales }: { sales: SaleRow[] }) {
                   <th>Date</th>
                   <th>Lines</th>
                   <th>Returns</th>
-                  <th>Total</th>
+                  <th>Net Total</th>
                   <th>Actions</th>
                 </tr>
               </thead>

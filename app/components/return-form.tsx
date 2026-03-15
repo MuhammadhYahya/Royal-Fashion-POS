@@ -33,8 +33,8 @@ export function ReturnForm({
   const [qtyByLineId, setQtyByLineId] = useState<Record<number, number>>({});
   const [adjustment, setAdjustment] = useState(0);
   const [note, setNote] = useState("");
-  const [payments, setPayments] = useState<{ method: PaymentMethod; amountInput: string }[]>([
-    { method: "CASH", amountInput: "" },
+  const [payments, setPayments] = useState<{ method: PaymentMethod; amount: number }[]>([
+    { method: "CASH", amount: 0 },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -57,44 +57,40 @@ export function ReturnForm({
   const subtotal = selected.reduce((sum, l) => sum + l.lineTotal, 0);
   const safeAdjustment = Math.min(Math.max(adjustment, 0), subtotal);
   const totalRefund = subtotal - safeAdjustment;
-  const parsedPayments = useMemo(
-    () =>
-      payments.map((payment) => {
-        const trimmed = payment.amountInput.trim();
-        if (!trimmed) {
-          return { ...payment, amount: null as number | null };
-        }
-        const parsed = Number(trimmed);
-        if (!Number.isFinite(parsed)) {
-          return { ...payment, amount: null as number | null };
-        }
-        return { ...payment, amount: parseCurrencyToMinor(trimmed) };
-      }),
-    [payments],
-  );
-  const paymentTotal = parsedPayments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+  const hasRefundableTotal = totalRefund > 0;
+  const effectivePayments = useMemo(() => {
+    if (
+      hasRefundableTotal &&
+      payments.length === 1 &&
+      payments[0].method === "CASH" &&
+      payments[0].amount === 0
+    ) {
+      return [{ method: "CASH" as PaymentMethod, amount: totalRefund }];
+    }
+
+    return payments;
+  }, [hasRefundableTotal, payments, totalRefund]);
+  const paymentTotal = effectivePayments.reduce((sum, p) => sum + p.amount, 0);
 
   const validationMessage = useMemo(() => {
     if (selected.length === 0) {
       return "Select at least one return line.";
     }
 
-    if (payments.length === 0) {
+    if (!hasRefundableTotal) {
+      return "Refund total is 0. Reduce adjustment or increase the return quantity.";
+    }
+
+    if (effectivePayments.length === 0) {
       return "Add at least one refund method.";
     }
 
-    for (const payment of parsedPayments) {
-      if (!payment.amountInput.trim()) {
-        return "Refund amount cannot be empty.";
-      }
-      if (payment.amount === null) {
-        return "Enter a valid refund amount.";
-      }
+    for (const payment of effectivePayments) {
       if (payment.amount <= 0) {
         return "Refund amount must be greater than 0.";
       }
       if (payment.amount > totalRefund) {
-        return "Refund amount cannot exceed the refundable amount.";
+        return `Refund amount cannot exceed ${formatMoney(totalRefund, "LKR", "en-LK")}.`;
       }
     }
 
@@ -103,7 +99,7 @@ export function ReturnForm({
     }
 
     return "";
-  }, [parsedPayments, paymentTotal, payments.length, selected.length, totalRefund]);
+  }, [effectivePayments, hasRefundableTotal, paymentTotal, selected.length, totalRefund]);
 
   const canSubmit = !isSubmitting && !validationMessage;
 
@@ -114,26 +110,28 @@ export function ReturnForm({
       return;
     }
 
-    const normalizedPayments = parsedPayments.map((payment) => ({
-      method: payment.method,
-      amount: payment.amount ?? 0,
-    }));
-
     setIsSubmitting(true);
-    const response = await fetch("/api/returns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        saleId,
-        lines: selected.map((line) => ({
-          saleLineId: line.saleLineId,
-          quantity: line.quantity,
-        })),
-        adjustment: safeAdjustment,
-        note,
-        payments: normalizedPayments,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/returns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          saleId,
+          lines: selected.map((line) => ({
+            saleLineId: line.saleLineId,
+            quantity: line.quantity,
+          })),
+          adjustment: safeAdjustment,
+          note,
+          payments: effectivePayments,
+        }),
+      });
+    } catch {
+      setIsSubmitting(false);
+      setMessage("Network error while submitting return.");
+      return;
+    }
     const body = await response.json();
     if (!response.ok) {
       setIsSubmitting(false);
@@ -227,7 +225,7 @@ export function ReturnForm({
               placeholder="Optional note"
             />
           </label>
-          {payments.map((payment, i) => (
+          {effectivePayments.map((payment, i) => (
             <div className="payment-grid" key={`${payment.method}-${i}`}>
               <label className="field field-compact">
                 <span>Method</span>
@@ -258,15 +256,21 @@ export function ReturnForm({
                   type="number"
                   min={0.01}
                   step="0.01"
-                  value={payment.amountInput}
+                  disabled={!hasRefundableTotal}
+                  value={formatMinorAsInput(payment.amount)}
                   onChange={(e) =>
                     setPayments((prev) =>
                       prev.map((p, idx) =>
-                        idx === i ? { ...p, amountInput: e.target.value } : p,
+                        idx === i ? { ...p, amount: parseCurrencyToMinor(e.target.value) } : p,
                       ),
                     )
                   }
                 />
+                <small className="field-help">
+                  {hasRefundableTotal
+                    ? `Display: ${formatMoney(payment.amount, "LKR", "en-LK")}`
+                    : "Select return quantity first."}
+                </small>
               </label>
               <button
                 className="btn btn-danger btn-sm row icon-btn"
@@ -280,15 +284,45 @@ export function ReturnForm({
               </button>
             </div>
           ))}
-          <button
-            className="btn btn-outline row"
-            style={{ width: "fit-content" }}
-            type="button"
-            onClick={() => setPayments((prev) => [...prev, { method: "CASH", amountInput: "" }])}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Refund Method</span>
-          </button>
+          <div className="row">
+            <button
+              className="btn btn-outline row"
+              style={{ width: "fit-content" }}
+              type="button"
+              onClick={() => setPayments((prev) => [...prev, { method: "CASH", amount: 0 }])}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Refund Method</span>
+            </button>
+            <button
+              className="btn btn-warning"
+              type="button"
+              disabled={!hasRefundableTotal}
+              onClick={() => {
+                if (payments.length === 0) {
+                  setPayments([{ method: "CASH", amount: totalRefund }]);
+                  return;
+                }
+                const firstCashIndex = payments.findIndex((payment) => payment.method === "CASH");
+                if (firstCashIndex === -1) {
+                  setPayments((prev) => [...prev, { method: "CASH", amount: totalRefund }]);
+                  return;
+                }
+                setPayments((prev) =>
+                  prev.map((payment, idx) =>
+                    idx === firstCashIndex
+                      ? {
+                          ...payment,
+                          amount: totalRefund,
+                        }
+                      : payment,
+                  ),
+                );
+              }}
+            >
+              Set Exact Refund
+            </button>
+          </div>
         </div>
 
         <div className="totals">

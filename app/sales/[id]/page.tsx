@@ -45,9 +45,25 @@ export default async function SaleDetailPage({
         <div className="totals">
           <p>Subtotal: {formatMoney(sale.subtotal, "LKR", "en-LK")}</p>
           <p>Discount: {formatMoney(sale.discount, "LKR", "en-LK")}</p>
-          <p>Total: {formatMoney(sale.total, "LKR", "en-LK")}</p>
-          <p>Profit: {formatMoney(sale.profit, "LKR", "en-LK")}</p>
+          <p>Original Total: {formatMoney(sale.total, "LKR", "en-LK")}</p>
+          <p>Refunded: {formatMoney(sale.refundedTotal, "LKR", "en-LK")}</p>
+          <p>Net Total: {formatMoney(sale.netTotal, "LKR", "en-LK")}</p>
+          <p>Original Profit: {formatMoney(sale.profit, "LKR", "en-LK")}</p>
+          <p>Net Profit: {formatMoney(sale.netProfit, "LKR", "en-LK")}</p>
         </div>
+        {sale.returns.length > 0 ? (
+          <>
+            <h3>Returns</h3>
+            <ul>
+              {sale.returns.map((rtn) => (
+                <li key={rtn.id}>
+                  #{rtn.id} on {new Date(rtn.createdAt).toLocaleString("en-LK")}:{" "}
+                  {formatMoney(rtn.totalRefund, "LKR", "en-LK")}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
         <h3>Payments</h3>
         <ul>
           {sale.payments.map((payment) => (
@@ -68,4 +84,3 @@ export default async function SaleDetailPage({
     </section>
   );
 }
-

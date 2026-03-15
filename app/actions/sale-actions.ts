@@ -5,6 +5,21 @@ import type { CreateSaleInput } from "@/lib/pos/types";
 
 const VALID_PAYMENT_METHODS = new Set(["CASH", "CARD", "TRANSFER", "EWALLET"]);
 
+function getRefundedTotal(returns: Array<{ totalRefund: number }>) {
+  return returns.reduce((sum, rtn) => sum + rtn.totalRefund, 0);
+}
+
+function getReturnedCost(
+  returns: Array<{ lines: Array<{ quantity: number; saleLine: { unitCost: number } }> }>,
+) {
+  return returns.reduce(
+    (sum, rtn) =>
+      sum +
+      rtn.lines.reduce((lineSum, line) => lineSum + line.quantity * line.saleLine.unitCost, 0),
+    0,
+  );
+}
+
 function validatePayments(total: number, payments: { amount: number; method: unknown }[]) {
   if (payments.length === 0) {
     throw new PosError("INVALID_PAYMENT_SUM", "At least one payment is required.");
@@ -119,12 +134,26 @@ export async function createSale(input: CreateSaleInput) {
 }
 
 export async function listSales() {
-  return prisma.sale.findMany({
+  const sales = await prisma.sale.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       payments: true,
+      returns: {
+        select: {
+          totalRefund: true,
+        },
+      },
       _count: { select: { saleLines: true, returns: true } },
     },
+  });
+
+  return sales.map((sale) => {
+    const refundedTotal = getRefundedTotal(sale.returns);
+    return {
+      ...sale,
+      refundedTotal,
+      netTotal: sale.total - refundedTotal,
+    };
   });
 }
 
@@ -152,6 +181,36 @@ async function aggregateSales(from: Date, to: Date) {
   };
 }
 
+async function aggregateReturns(from: Date, to: Date) {
+  const returns = await prisma.return.findMany({
+    where: {
+      createdAt: {
+        gte: from,
+        lt: to,
+      },
+    },
+    select: {
+      totalRefund: true,
+      lines: {
+        select: {
+          quantity: true,
+          saleLine: {
+            select: {
+              unitCost: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return {
+    totalRefunds: getRefundedTotal(returns),
+    returnedCost: getReturnedCost(returns),
+    returns: returns.length,
+  };
+}
+
 async function aggregateExpenses(from: Date, to: Date) {
   const result = await prisma.expense.aggregate({
     where: {
@@ -169,11 +228,18 @@ async function aggregateExpenses(from: Date, to: Date) {
 }
 
 async function aggregateSalesWithExpenses(from: Date, to: Date) {
-  const [sales, totalExpenses] = await Promise.all([aggregateSales(from, to), aggregateExpenses(from, to)]);
+  const [sales, returns, totalExpenses] = await Promise.all([
+    aggregateSales(from, to),
+    aggregateReturns(from, to),
+    aggregateExpenses(from, to),
+  ]);
   return {
     ...sales,
+    totalRefunds: returns.totalRefunds,
+    netSales: sales.totalSales - returns.totalRefunds,
     totalExpenses,
-    netProfit: sales.totalProfit - totalExpenses,
+    netProfit: sales.totalProfit - returns.totalRefunds + returns.returnedCost - totalExpenses,
+    refunds: returns.returns,
   };
 }
 
@@ -199,7 +265,7 @@ export async function getSalesReports() {
 }
 
 export async function getSaleById(id: number) {
-  return prisma.sale.findUnique({
+  const sale = await prisma.sale.findUnique({
     where: { id },
     include: {
       saleLines: {
@@ -208,7 +274,33 @@ export async function getSaleById(id: number) {
       payments: true,
       returns: {
         orderBy: { createdAt: "desc" },
+        include: {
+          lines: {
+            select: {
+              quantity: true,
+              saleLine: {
+                select: {
+                  unitCost: true,
+                },
+              },
+            },
+          },
+        },
       },
     },
   });
+
+  if (!sale) {
+    return null;
+  }
+
+  const refundedTotal = getRefundedTotal(sale.returns);
+  const returnedCost = getReturnedCost(sale.returns);
+
+  return {
+    ...sale,
+    refundedTotal,
+    netTotal: sale.total - refundedTotal,
+    netProfit: sale.profit - refundedTotal + returnedCost,
+  };
 }

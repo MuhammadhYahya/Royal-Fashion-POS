@@ -87,6 +87,8 @@ export function DayByDayReport({ rows, generatedAt }: DayByDayReportProps) {
       <tr key={row.date}>
         <td>{row.date}</td>
         <td>{formatMoney(row.totalSales, "LKR", "en-LK")}</td>
+        <td>{formatMoney(row.totalRefunds, "LKR", "en-LK")}</td>
+        <td>{formatMoney(row.netSales, "LKR", "en-LK")}</td>
         <td>{formatMoney(row.totalExpenses, "LKR", "en-LK")}</td>
         <td>{formatMoney(row.finalBalance, "LKR", "en-LK")}</td>
         <td>
@@ -160,7 +162,9 @@ export function DayByDayReport({ rows, generatedAt }: DayByDayReportProps) {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Total Sales</th>
+                <th>Gross Sales</th>
+                <th>Refunds</th>
+                <th>Net Sales</th>
                 <th>Total Expenses</th>
                 <th>Final Balance / Profit</th>
                 <th>Actions</th>
@@ -171,7 +175,7 @@ export function DayByDayReport({ rows, generatedAt }: DayByDayReportProps) {
                 renderRows(latestRows)
               ) : (
                 <tr>
-                  <td colSpan={5} className="text-muted">
+                  <td colSpan={7} className="text-muted">
                     No report rows match the selected filter.
                   </td>
                 </tr>
@@ -191,11 +195,13 @@ export function DayByDayReport({ rows, generatedAt }: DayByDayReportProps) {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Total Sales</th>
-                    <th>Total Expenses</th>
-                    <th>Final Balance / Profit</th>
-                    <th>Actions</th>
+                      <th>Date</th>
+                      <th>Gross Sales</th>
+                      <th>Refunds</th>
+                      <th>Net Sales</th>
+                      <th>Total Expenses</th>
+                      <th>Final Balance / Profit</th>
+                      <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>{renderRows(monthRows)}</tbody>

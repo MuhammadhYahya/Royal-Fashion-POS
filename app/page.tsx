@@ -32,7 +32,9 @@ export default async function Home() {
           <table className="table">
             <thead>
               <tr>
-                <th>Total Sales</th>
+                <th>Gross Sales</th>
+                <th>Refunds</th>
+                <th>Net Sales</th>
                 <th>Total Expenses</th>
                 <th>Final Balance / Profit</th>
                 <th>Transactions</th>
@@ -41,6 +43,8 @@ export default async function Home() {
             <tbody>
               <tr>
                 <td>{formatMoney(reports.daily.totalSales, "LKR", "en-LK")}</td>
+                <td>{formatMoney(reports.daily.totalRefunds, "LKR", "en-LK")}</td>
+                <td>{formatMoney(reports.daily.netSales, "LKR", "en-LK")}</td>
                 <td>{formatMoney(reports.daily.totalExpenses, "LKR", "en-LK")}</td>
                 <td>{formatMoney(reports.daily.netProfit, "LKR", "en-LK")}</td>
                 <td>{reports.daily.transactions}</td>
