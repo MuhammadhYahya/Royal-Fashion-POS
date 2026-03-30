@@ -6,7 +6,7 @@ export type DailySummaryRow = {
   totalRefunds: number;
   netSales: number;
   totalExpenses: number;
-  finalBalance: number;
+  netProfit: number;
 };
 
 export type DailyExpenseDetail = {
@@ -26,6 +26,8 @@ export type DailyCompleteReport = {
   netSales: number;
   cashPayments: number;
   cardPayments: number;
+  transferPayments: number;
+  ewalletPayments: number;
   discounts: number;
   totalExpenses: number;
   expenses: DailyExpenseDetail[];
@@ -34,7 +36,7 @@ export type DailyCompleteReport = {
     Transport: number;
     Other: number;
   };
-  finalBalance: number;
+  netProfit: number;
   transactionCount: number;
   returnCount: number;
 };
@@ -89,18 +91,40 @@ function classifyExpenseCategory(note: string | null) {
   return "Other" as const;
 }
 
+function getReturnedCost(
+  returns: Array<{ lines: Array<{ quantity: number; saleLine: { unitCost: number } }> }>,
+) {
+  return returns.reduce(
+    (sum, rtn) =>
+      sum +
+      rtn.lines.reduce((lineSum, line) => lineSum + line.quantity * line.saleLine.unitCost, 0),
+    0,
+  );
+}
+
 export async function getDailySummaryRows() {
   const [sales, returns, expenses] = await Promise.all([
     prisma.sale.findMany({
       select: {
         createdAt: true,
         total: true,
+        profit: true,
       },
     }),
     prisma.return.findMany({
       select: {
         createdAt: true,
         totalRefund: true,
+        lines: {
+          select: {
+            quantity: true,
+            saleLine: {
+              select: {
+                unitCost: true,
+              },
+            },
+          },
+        },
       },
     }),
     prisma.expense.findMany({
@@ -113,17 +137,26 @@ export async function getDailySummaryRows() {
 
   const totalsByDay = new Map<
     string,
-    { totalSales: number; totalRefunds: number; totalExpenses: number }
+    {
+      totalSales: number;
+      totalProfit: number;
+      totalRefunds: number;
+      returnedCost: number;
+      totalExpenses: number;
+    }
   >();
 
   for (const sale of sales) {
     const dateKey = toLocalDateKey(new Date(sale.createdAt));
     const existing = totalsByDay.get(dateKey) ?? {
       totalSales: 0,
+      totalProfit: 0,
       totalRefunds: 0,
+      returnedCost: 0,
       totalExpenses: 0,
     };
     existing.totalSales += sale.total;
+    existing.totalProfit += sale.profit;
     totalsByDay.set(dateKey, existing);
   }
 
@@ -131,10 +164,13 @@ export async function getDailySummaryRows() {
     const dateKey = toLocalDateKey(new Date(rtn.createdAt));
     const existing = totalsByDay.get(dateKey) ?? {
       totalSales: 0,
+      totalProfit: 0,
       totalRefunds: 0,
+      returnedCost: 0,
       totalExpenses: 0,
     };
     existing.totalRefunds += rtn.totalRefund;
+    existing.returnedCost += getReturnedCost([rtn]);
     totalsByDay.set(dateKey, existing);
   }
 
@@ -142,7 +178,9 @@ export async function getDailySummaryRows() {
     const dateKey = toLocalDateKey(new Date(expense.createdAt));
     const existing = totalsByDay.get(dateKey) ?? {
       totalSales: 0,
+      totalProfit: 0,
       totalRefunds: 0,
+      returnedCost: 0,
       totalExpenses: 0,
     };
     existing.totalExpenses += expense.amount;
@@ -156,7 +194,8 @@ export async function getDailySummaryRows() {
       totalRefunds: totals.totalRefunds,
       netSales: totals.totalSales - totals.totalRefunds,
       totalExpenses: totals.totalExpenses,
-      finalBalance: totals.totalSales - totals.totalRefunds - totals.totalExpenses,
+      netProfit:
+        totals.totalProfit - totals.totalRefunds + totals.returnedCost - totals.totalExpenses,
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
 }
@@ -180,6 +219,7 @@ export async function getDailyCompleteReport(dateKey: string): Promise<DailyComp
         id: true,
         total: true,
         discount: true,
+        profit: true,
         payments: {
           select: {
             amount: true,
@@ -198,6 +238,16 @@ export async function getDailyCompleteReport(dateKey: string): Promise<DailyComp
       select: {
         id: true,
         totalRefund: true,
+        lines: {
+          select: {
+            quantity: true,
+            saleLine: {
+              select: {
+                unitCost: true,
+              },
+            },
+          },
+        },
       },
     }),
     prisma.expense.findMany({
@@ -221,13 +271,17 @@ export async function getDailyCompleteReport(dateKey: string): Promise<DailyComp
   ]);
 
   let totalSales = 0;
+  let totalProfit = 0;
   let totalRefunds = 0;
   let cashPayments = 0;
   let cardPayments = 0;
+  let transferPayments = 0;
+  let ewalletPayments = 0;
   let discounts = 0;
 
   for (const sale of sales) {
     totalSales += sale.total;
+    totalProfit += sale.profit;
     discounts += sale.discount;
     for (const payment of sale.payments) {
       if (payment.method === "CASH") {
@@ -236,11 +290,19 @@ export async function getDailyCompleteReport(dateKey: string): Promise<DailyComp
       if (payment.method === "CARD") {
         cardPayments += payment.amount;
       }
+      if (payment.method === "TRANSFER") {
+        transferPayments += payment.amount;
+      }
+      if (payment.method === "EWALLET") {
+        ewalletPayments += payment.amount;
+      }
     }
   }
 
+  let returnedCost = 0;
   for (const rtn of returns) {
     totalRefunds += rtn.totalRefund;
+    returnedCost += getReturnedCost([rtn]);
   }
 
   const detailedExpenses: DailyExpenseDetail[] = expenses.map((expense) => ({
@@ -272,11 +334,13 @@ export async function getDailyCompleteReport(dateKey: string): Promise<DailyComp
     netSales: totalSales - totalRefunds,
     cashPayments,
     cardPayments,
+    transferPayments,
+    ewalletPayments,
     discounts,
     totalExpenses,
     expenses: detailedExpenses,
     expenseCategoryTotals,
-    finalBalance: totalSales - totalRefunds - totalExpenses,
+    netProfit: totalProfit - totalRefunds + returnedCost - totalExpenses,
     transactionCount: sales.length,
     returnCount: returns.length,
   };

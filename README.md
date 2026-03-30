@@ -1,6 +1,13 @@
-# Bag Shop POS
+# Royal Fashion POS
 
 Next.js + Prisma (SQLite) POS system with sales, returns, products, inventory, expenses, and printable reports.
+
+## What To Share
+
+- Source code: push this repository to GitHub.
+- Desktop app: share the packaged Windows app from `release/win-unpacked/`.
+
+Do not commit `release/` into the normal branch. The packaged app is generated output and is better shared separately as a zip or GitHub Release asset.
 
 ## Local Development
 
@@ -14,6 +21,60 @@ Run the web app:
 
 ```bash
 npm run dev
+```
+
+Run the desktop app after building:
+
+```bash
+npm run build
+npm run desktop:start
+```
+
+## Shop Owner Setup
+
+Clone the repository:
+
+```bash
+git clone https://github.com/MuhammadhYahya/Royal-Fashion-POS.git
+cd Royal-Fashion-POS
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Apply the database and run:
+
+```bash
+npx prisma migrate deploy
+npm run build
+npm run desktop:start
+```
+
+## Packaged Windows App
+
+The current packaged desktop app is created under:
+
+```bash
+release/win-unpacked/
+```
+
+The main executable is:
+
+```bash
+release/win-unpacked/Royal Fashion.exe
+```
+
+Keep the whole `win-unpacked` folder together when sharing it.
+
+## Change The App Icon
+
+Replace this file and rebuild:
+
+```bash
+desktop-assets/icon.ico
 ```
 
 ## Database Notes

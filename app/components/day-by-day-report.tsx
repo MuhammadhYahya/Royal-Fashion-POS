@@ -90,7 +90,7 @@ export function DayByDayReport({ rows, generatedAt }: DayByDayReportProps) {
         <td>{formatMoney(row.totalRefunds, "LKR", "en-LK")}</td>
         <td>{formatMoney(row.netSales, "LKR", "en-LK")}</td>
         <td>{formatMoney(row.totalExpenses, "LKR", "en-LK")}</td>
-        <td>{formatMoney(row.finalBalance, "LKR", "en-LK")}</td>
+        <td>{formatMoney(row.netProfit, "LKR", "en-LK")}</td>
         <td>
           <Link
             className="btn btn-sm btn-outline no-print"
@@ -166,7 +166,7 @@ export function DayByDayReport({ rows, generatedAt }: DayByDayReportProps) {
                 <th>Refunds</th>
                 <th>Net Sales</th>
                 <th>Total Expenses</th>
-                <th>Final Balance / Profit</th>
+                <th>Net Profit</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -200,7 +200,7 @@ export function DayByDayReport({ rows, generatedAt }: DayByDayReportProps) {
                       <th>Refunds</th>
                       <th>Net Sales</th>
                       <th>Total Expenses</th>
-                      <th>Final Balance / Profit</th>
+                      <th>Net Profit</th>
                       <th>Actions</th>
                   </tr>
                 </thead>

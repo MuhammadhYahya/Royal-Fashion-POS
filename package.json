@@ -1,16 +1,24 @@
 {
   "name": "bag_shop",
+  "productName": "Royal Fashion",
   "version": "0.1.0",
   "private": true,
+  "description": "Royal Fashion POS desktop app with sales, inventory, expenses, returns, and reports.",
+  "author": "Royal Fashion",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "next dev",
     "dev:web": "next dev",
+    "desktop:dev": "node electron/dev-runner.cjs",
     "verify": "npm run lint && npx tsc --noEmit",
     "build": "npm run build:web",
     "build:web": "npm run verify && next build",
+    "desktop:start": "set ELECTRON_RUN_AS_NODE=&& electron . --no-sandbox",
+    "desktop": "npm run build:web && npm run desktop:start",
+    "dist:win": "npm run build:web && electron-builder --win portable",
     "start": "next start",
     "start:web": "next start",
-    "postinstall": "prisma generate", 
+    "postinstall": "prisma generate",
     "lint": "eslint"
   },
   "dependencies": {
@@ -27,10 +35,46 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^41.1.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "prisma": "^7.4.2",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "build": {
+    "appId": "com.royalfashion.pos",
+    "productName": "Royal Fashion",
+    "artifactName": "Royal Fashion POS ${version}.${ext}",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release",
+      "buildResources": "desktop-assets"
+    },
+    "asar": false,
+    "files": [
+      ".next/**/*",
+      "app/**/*",
+      "electron/**/*",
+      "lib/**/*",
+      "node_modules/**/*",
+      "prisma/**/*",
+      "public/**/*",
+      ".env",
+      "dev.db",
+      "next.config.mjs",
+      "package.json",
+      "prisma.config.ts"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "desktop-assets/icon.ico"
+    }
   }
 }

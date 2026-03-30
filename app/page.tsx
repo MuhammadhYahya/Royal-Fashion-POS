@@ -22,7 +22,7 @@ export default async function Home() {
         <div className="section-head-row mb-4">
           <div className="row" style={{ gap: "0.75rem" }}>
             <Wallet className="w-6 h-6 text-primary" />
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 800 }}>End of Day Balance</h2>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 800 }}>End of Day Summary</h2>
           </div>
           <Link className="btn btn-outline no-print" href="/report">
             Open Reports
@@ -36,7 +36,7 @@ export default async function Home() {
                 <th>Refunds</th>
                 <th>Net Sales</th>
                 <th>Total Expenses</th>
-                <th>Final Balance / Profit</th>
+                <th>Net Profit</th>
                 <th>Transactions</th>
               </tr>
             </thead>

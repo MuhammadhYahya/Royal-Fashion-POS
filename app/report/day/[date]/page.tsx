@@ -77,6 +77,14 @@ export default async function DailyCompleteReportPage({
                 <td>{formatMoney(report.cardPayments, "LKR", "en-LK")}</td>
               </tr>
               <tr>
+                <th>Transfer Payments</th>
+                <td>{formatMoney(report.transferPayments, "LKR", "en-LK")}</td>
+              </tr>
+              <tr>
+                <th>E-Wallet Payments</th>
+                <td>{formatMoney(report.ewalletPayments, "LKR", "en-LK")}</td>
+              </tr>
+              <tr>
                 <th>Discounts</th>
                 <td>{formatMoney(report.discounts, "LKR", "en-LK")}</td>
               </tr>
@@ -156,9 +164,9 @@ export default async function DailyCompleteReportPage({
       </section>
 
       <section className="card">
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Final Balance / Profit</h2>
+        <h2 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Net Profit</h2>
         <p style={{ marginTop: "0.5rem", fontSize: "1.4rem", fontWeight: 800 }}>
-          {formatMoney(report.finalBalance, "LKR", "en-LK")}
+          {formatMoney(report.netProfit, "LKR", "en-LK")}
         </p>
       </section>
     </section>

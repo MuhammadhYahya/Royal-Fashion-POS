@@ -1,6 +1,4 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+const nextConfig = {
   output: "standalone",
   typescript: {
     // Type-checking is enforced by `npm run verify` before build.
